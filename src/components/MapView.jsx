@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import { FACILITIES } from '../data/facilities'
@@ -38,15 +38,23 @@ function createStarIcon(isSelected) {
   })
 }
 
-// ── Fly-to helper when selectedId changes ──────────────────────────────────
+// Half of SidePanel max-w-sm (384px) — shifts star left of the panel
+const PANEL_OFFSET_PX = 192
+
+// ── Fly-to helper with right-panel offset ──────────────────────────────────
 function FlyToSelected({ facility }) {
   const map = useMap()
+  const prevIdRef = useRef(null)
   useEffect(() => {
-    if (facility) {
-      map.flyTo([facility.lat, facility.lng], Math.max(map.getZoom(), 9), {
-        duration: 0.8,
-      })
-    }
+    // Skip if no facility or if we already flew to this one
+    if (!facility || facility.id === prevIdRef.current) return
+    prevIdRef.current = facility.id
+
+    const zoom = Math.max(map.getZoom(), 9)
+    // Project to pixels, shift east so the star sits left of the side panel
+    const target = map.project([facility.lat, facility.lng], zoom)
+    const shifted = map.unproject(target.add([PANEL_OFFSET_PX, 0]), zoom)
+    map.flyTo(shifted, zoom, { duration: 0.8, easeLinearity: 0.5 })
   }, [facility, map])
   return null
 }
@@ -60,6 +68,7 @@ export default function MapView({ selectedId, onSelectFacility }) {
       zoom={7}
       className="w-full h-full"
       zoomControl={true}
+      closePopupOnClick={false}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -72,7 +81,10 @@ export default function MapView({ selectedId, onSelectFacility }) {
           position={[facility.lat, facility.lng]}
           icon={createStarIcon(facility.id === selectedId)}
           eventHandlers={{
-            click: () => onSelectFacility(facility.id),
+            click: (e) => {
+              L.DomEvent.stopPropagation(e)
+              onSelectFacility(facility.id)
+            },
           }}
         >
           <Tooltip
