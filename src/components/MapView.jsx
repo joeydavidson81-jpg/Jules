@@ -1,5 +1,4 @@
-import { useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, Marker, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { FACILITIES } from '../data/facilities'
 
@@ -13,7 +12,7 @@ L.Icon.Default.mergeOptions({
 
 // ── Custom gold star DivIcon ────────────────────────────────────────────────
 function createStarIcon(isSelected) {
-  const color = isSelected ? '#f97316' : '#d69e2e'  // orange when selected, gold otherwise
+  const color = isSelected ? '#f97316' : '#d69e2e'
   const size  = isSelected ? 32 : 26
 
   const svg = `
@@ -38,30 +37,7 @@ function createStarIcon(isSelected) {
   })
 }
 
-// Half of SidePanel max-w-sm (384px) — shifts star left of the panel
-const PANEL_OFFSET_PX = 192
-
-// ── Fly-to helper with right-panel offset ──────────────────────────────────
-function FlyToSelected({ facility }) {
-  const map = useMap()
-  const prevIdRef = useRef(null)
-  useEffect(() => {
-    // Skip if no facility or if we already flew to this one
-    if (!facility || facility.id === prevIdRef.current) return
-    prevIdRef.current = facility.id
-
-    const zoom = Math.max(map.getZoom(), 9)
-    // Project to pixels, shift east so the star sits left of the side panel
-    const target = map.project([facility.lat, facility.lng], zoom)
-    const shifted = map.unproject(target.add([PANEL_OFFSET_PX, 0]), zoom)
-    map.flyTo(shifted, zoom, { duration: 0.8, easeLinearity: 0.5 })
-  }, [facility, map])
-  return null
-}
-
 export default function MapView({ selectedId, onSelectFacility }) {
-  const selectedFacility = FACILITIES.find((f) => f.id === selectedId) ?? null
-
   return (
     <MapContainer
       center={[35.5, -79.5]}
@@ -69,6 +45,7 @@ export default function MapView({ selectedId, onSelectFacility }) {
       className="w-full h-full"
       zoomControl={true}
       closePopupOnClick={false}
+      trackResize={false}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -98,8 +75,6 @@ export default function MapView({ selectedId, onSelectFacility }) {
           </Tooltip>
         </Marker>
       ))}
-
-      <FlyToSelected facility={selectedFacility} />
     </MapContainer>
   )
 }

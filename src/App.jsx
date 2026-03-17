@@ -93,7 +93,7 @@ export default function App() {
       )}
 
       {/* ── Full-screen map ───────────────────────────────────────────────── */}
-      <div className="absolute inset-0 pt-[52px]">
+      <div className="absolute inset-0 pt-[52px] z-[1]">
         <MapView
           selectedId={selectedId}
           onSelectFacility={handleSelectFacility}
