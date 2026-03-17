@@ -41,6 +41,14 @@ function createStarIcon(isSelected) {
   })
 }
 
+// Created once — same object reference means react-leaflet's Marker skips
+// setIcon() for every marker whose selection state didn't change.
+// Previously, createStarIcon() was called inside the render loop, producing a
+// brand-new L.DivIcon on every render for all 60+ markers, so ALL of them
+// called setIcon() simultaneously and bounced every time any star was tapped.
+const ICON_DEFAULT  = createStarIcon(false)
+const ICON_SELECTED = createStarIcon(true)
+
 export default function MapView({ selectedId, onSelectFacility }) {
   return (
     <MapContainer
@@ -61,7 +69,7 @@ export default function MapView({ selectedId, onSelectFacility }) {
         <Marker
           key={facility.id}
           position={[facility.lat, facility.lng]}
-          icon={createStarIcon(facility.id === selectedId)}
+          icon={facility.id === selectedId ? ICON_SELECTED : ICON_DEFAULT}
           eventHandlers={{
             click: (e) => {
               // Stop the raw DOM event — L.DomEvent.stopPropagation(e) only
