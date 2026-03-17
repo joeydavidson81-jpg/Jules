@@ -1,0 +1,42 @@
+/* ── Leaflet base styles (must come before Tailwind to allow overrides) ───── */
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global resets ───────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Leaflet container fill ──────────────────────────────────────────────── */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #1a1a2e;
+}
+
+/* ── Smooth star hover ───────────────────────────────────────────────────── */
+.leaflet-marker-icon {
+  transition: transform 0.15s ease, filter 0.15s ease;
+}
+.leaflet-marker-icon:hover {
+  transform: scale(1.25) !important;
+  filter: drop-shadow(0 4px 8px rgba(214, 158, 46, 0.7)) !important;
+  cursor: pointer;
+}
+
+/* ── Custom Leaflet tooltip overrides ────────────────────────────────────── */
+.leaflet-tooltip {
+  pointer-events: none;
+}
