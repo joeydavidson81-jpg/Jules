@@ -50,6 +50,7 @@ export default function MapView({ selectedId, onSelectFacility }) {
       zoomControl={true}
       closePopupOnClick={false}
       trackResize={false}
+      doubleClickZoom={false}
     >
       <TileLayer
         attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
@@ -63,7 +64,13 @@ export default function MapView({ selectedId, onSelectFacility }) {
           icon={createStarIcon(facility.id === selectedId)}
           eventHandlers={{
             click: (e) => {
-              L.DomEvent.stopPropagation(e)
+              // Stop the raw DOM event — L.DomEvent.stopPropagation(e) only
+              // stops Leaflet-level propagation; the original DOM click can
+              // still bubble and trigger a second handler invocation on touch.
+              if (e.originalEvent) {
+                e.originalEvent.stopPropagation()
+                e.originalEvent.preventDefault()
+              }
               onSelectFacility(facility.id)
             },
           }}

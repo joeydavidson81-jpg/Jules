@@ -18,7 +18,7 @@ export default function App() {
   const [showLogin, setShowLogin]       = useState(false)
 
   const handleSelectFacility = (id) => {
-    setSelectedId((prev) => (prev === id ? null : id))   // toggle
+    setSelectedId(id)
   }
 
   const handleClosePanel = () => setSelectedId(null)
