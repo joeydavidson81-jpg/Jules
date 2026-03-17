@@ -1,4 +1,4 @@
-import { memo, useMemo, useState, useCallback } from 'react'
+import { memo, useMemo, useState, useCallback, useRef, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { FACILITIES } from '../data/facilities'
@@ -11,49 +11,45 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
 })
 
-// ── Custom gold star DivIcon ────────────────────────────────────────────────
-// Container is always 36×36 so iconAnchor never shifts between states.
-// Only the inner SVG colour and size change — Leaflet's hit-box stays fixed.
-function createStarIcon(isSelected) {
-  const color   = isSelected ? '#f97316' : '#d69e2e'
-  const svgSize = isSelected ? 32 : 22
+// ── Single star DivIcon ─────────────────────────────────────────────────────
+// All 60 markers share this one icon object forever.
+// Selection state is communicated by toggling a CSS class on the existing
+// DOM element — setIcon() is never called after initial mount, so the
+// element is never removed/re-inserted, eliminating the jump entirely.
+const STAR_ICON = L.divIcon({
+  html: `<div class="star-icon-wrapper">
+    <svg xmlns="http://www.w3.org/2000/svg"
+         viewBox="0 0 24 24"
+         class="star-svg"
+         style="filter:drop-shadow(0 2px 3px rgba(0,0,0,0.5))">
+      <polygon
+        class="star-poly"
+        points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
+        fill="#d69e2e"
+        stroke="#92400e"
+        stroke-width="1"
+      />
+    </svg>
+  </div>`,
+  className: '',
+  iconSize:   [36, 36],
+  iconAnchor: [18, 18],
+  tooltipAnchor: [18, 0],
+})
 
-  const svg = `
-    <div style="width:36px;height:36px;display:flex;align-items:center;justify-content:center;">
-      <svg xmlns="http://www.w3.org/2000/svg"
-           viewBox="0 0 24 24"
-           width="${svgSize}" height="${svgSize}"
-           style="filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5));">
-        <polygon
-          points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"
-          fill="${color}"
-          stroke="#92400e"
-          stroke-width="1"
-        />
-      </svg>
-    </div>`
-
-  return L.divIcon({
-    html: svg,
-    className: '',
-    iconSize:   [36, 36],   // fixed — never changes between states
-    iconAnchor: [18, 18],   // fixed — Leaflet never repositions the marker
-    tooltipAnchor: [18, 0],
-  })
-}
-
-// Created once — same object reference means react-leaflet's Marker skips
-// setIcon() for every marker whose selection state didn't change.
-const ICON_DEFAULT  = createStarIcon(false)
-const ICON_SELECTED = createStarIcon(true)
-
-// Stable tooltip offset constant — avoids creating a new array each render.
 const TOOLTIP_OFFSET = [0, -8]
 
 // ── FacilityMarker ──────────────────────────────────────────────────────────
-// Memoized so it only re-renders when isSelected changes for THIS facility.
 const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSelect }) {
-  const icon = isSelected ? ICON_SELECTED : ICON_DEFAULT
+  const markerRef = useRef(null)
+
+  // Directly toggle a CSS class on the existing Leaflet DOM element.
+  // No setIcon() call → no element removal/re-insertion → no jump.
+  useEffect(() => {
+    const el = markerRef.current?.getElement()
+    if (!el) return
+    el.classList.toggle('star-selected', isSelected)
+  }, [isSelected])
 
   const eventHandlers = useMemo(() => ({
     click: (e) => {
@@ -67,8 +63,9 @@ const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSe
 
   return (
     <Marker
+      ref={markerRef}
       position={[facility.lat, facility.lng]}
-      icon={icon}
+      icon={STAR_ICON}
       eventHandlers={eventHandlers}
     >
       <Tooltip
@@ -85,10 +82,6 @@ const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSe
 })
 
 // ── MapView ─────────────────────────────────────────────────────────────────
-// Wrapped in memo so that re-renders in App (e.g. SidePanel mounting,
-// showLogin toggling) never propagate into the map at all.
-// selectedId lives here — not in App — so the panel opening/closing
-// never causes map markers to re-render.
 export default memo(function MapView({ onSelectFacility }) {
   const [selectedId, setSelectedId] = useState(null)
 
