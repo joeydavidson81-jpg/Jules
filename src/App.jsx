@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import MapView from './components/MapView'
 import SidePanel from './components/SidePanel'
@@ -17,9 +17,9 @@ export default function App() {
   const [selectedId, setSelectedId]     = useState(null)
   const [showLogin, setShowLogin]       = useState(false)
 
-  const handleSelectFacility = (id) => {
+  const handleSelectFacility = useCallback((id) => {
     setSelectedId(id)
-  }
+  }, [])
 
   const handleClosePanel = () => setSelectedId(null)
 

@@ -1,3 +1,4 @@
+import { memo, useMemo } from 'react'
 import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { FACILITIES } from '../data/facilities'
@@ -43,11 +44,51 @@ function createStarIcon(isSelected) {
 
 // Created once — same object reference means react-leaflet's Marker skips
 // setIcon() for every marker whose selection state didn't change.
-// Previously, createStarIcon() was called inside the render loop, producing a
-// brand-new L.DivIcon on every render for all 60+ markers, so ALL of them
-// called setIcon() simultaneously and bounced every time any star was tapped.
 const ICON_DEFAULT  = createStarIcon(false)
 const ICON_SELECTED = createStarIcon(true)
+
+// Stable tooltip offset — defined outside render to avoid creating a new
+// array on every render (which would cause react-leaflet to call
+// tooltip.setOffset() on every marker, touching their DOM unnecessarily).
+const TOOLTIP_OFFSET = [0, -8]
+
+// ── FacilityMarker ──────────────────────────────────────────────────────────
+// Memoized so it only re-renders when isSelected changes for THIS facility.
+// This prevents all 60 markers from re-rendering (and having their
+// eventHandlers rebuilt) every time a different star is tapped.
+const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSelect }) {
+  const icon = isSelected ? ICON_SELECTED : ICON_DEFAULT
+
+  // useMemo keeps the eventHandlers object reference stable across renders
+  // so react-leaflet never tears down and re-adds listeners on unchanged markers.
+  const eventHandlers = useMemo(() => ({
+    click: (e) => {
+      if (e.originalEvent) {
+        e.originalEvent.stopPropagation()
+        e.originalEvent.preventDefault()
+      }
+      onSelect(facility.id)
+    },
+  }), [facility.id, onSelect])
+
+  return (
+    <Marker
+      position={[facility.lat, facility.lng]}
+      icon={icon}
+      eventHandlers={eventHandlers}
+    >
+      <Tooltip
+        direction="top"
+        offset={TOOLTIP_OFFSET}
+        className="!bg-gray-900 !text-white !border-0 !text-xs !px-2 !py-1 !rounded-md !shadow-lg"
+      >
+        <span className="font-semibold">{facility.name}</span>
+        <br />
+        <span className="text-gray-300">{facility.city}, {facility.county} Co.</span>
+      </Tooltip>
+    </Marker>
+  )
+})
 
 export default function MapView({ selectedId, onSelectFacility }) {
   return (
@@ -66,33 +107,12 @@ export default function MapView({ selectedId, onSelectFacility }) {
       />
 
       {FACILITIES.map((facility) => (
-        <Marker
+        <FacilityMarker
           key={facility.id}
-          position={[facility.lat, facility.lng]}
-          icon={facility.id === selectedId ? ICON_SELECTED : ICON_DEFAULT}
-          eventHandlers={{
-            click: (e) => {
-              // Stop the raw DOM event — L.DomEvent.stopPropagation(e) only
-              // stops Leaflet-level propagation; the original DOM click can
-              // still bubble and trigger a second handler invocation on touch.
-              if (e.originalEvent) {
-                e.originalEvent.stopPropagation()
-                e.originalEvent.preventDefault()
-              }
-              onSelectFacility(facility.id)
-            },
-          }}
-        >
-          <Tooltip
-            direction="top"
-            offset={[0, -8]}
-            className="!bg-gray-900 !text-white !border-0 !text-xs !px-2 !py-1 !rounded-md !shadow-lg"
-          >
-            <span className="font-semibold">{facility.name}</span>
-            <br />
-            <span className="text-gray-300">{facility.city}, {facility.county} Co.</span>
-          </Tooltip>
-        </Marker>
+          facility={facility}
+          isSelected={facility.id === selectedId}
+          onSelect={onSelectFacility}
+        />
       ))}
     </MapContainer>
   )
