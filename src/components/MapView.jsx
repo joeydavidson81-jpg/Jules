@@ -1,4 +1,4 @@
-import { memo, useMemo } from 'react'
+import { memo, useMemo, useState, useCallback } from 'react'
 import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import { FACILITIES } from '../data/facilities'
@@ -47,20 +47,14 @@ function createStarIcon(isSelected) {
 const ICON_DEFAULT  = createStarIcon(false)
 const ICON_SELECTED = createStarIcon(true)
 
-// Stable tooltip offset — defined outside render to avoid creating a new
-// array on every render (which would cause react-leaflet to call
-// tooltip.setOffset() on every marker, touching their DOM unnecessarily).
+// Stable tooltip offset constant — avoids creating a new array each render.
 const TOOLTIP_OFFSET = [0, -8]
 
 // ── FacilityMarker ──────────────────────────────────────────────────────────
 // Memoized so it only re-renders when isSelected changes for THIS facility.
-// This prevents all 60 markers from re-rendering (and having their
-// eventHandlers rebuilt) every time a different star is tapped.
 const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSelect }) {
   const icon = isSelected ? ICON_SELECTED : ICON_DEFAULT
 
-  // useMemo keeps the eventHandlers object reference stable across renders
-  // so react-leaflet never tears down and re-adds listeners on unchanged markers.
   const eventHandlers = useMemo(() => ({
     click: (e) => {
       if (e.originalEvent) {
@@ -90,7 +84,19 @@ const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSe
   )
 })
 
-export default function MapView({ selectedId, onSelectFacility }) {
+// ── MapView ─────────────────────────────────────────────────────────────────
+// Wrapped in memo so that re-renders in App (e.g. SidePanel mounting,
+// showLogin toggling) never propagate into the map at all.
+// selectedId lives here — not in App — so the panel opening/closing
+// never causes map markers to re-render.
+export default memo(function MapView({ onSelectFacility }) {
+  const [selectedId, setSelectedId] = useState(null)
+
+  const handleSelect = useCallback((id) => {
+    setSelectedId(id)
+    onSelectFacility(id)
+  }, [onSelectFacility])
+
   return (
     <MapContainer
       center={[35.5, -79.5]}
@@ -111,9 +117,9 @@ export default function MapView({ selectedId, onSelectFacility }) {
           key={facility.id}
           facility={facility}
           isSelected={facility.id === selectedId}
-          onSelect={onSelectFacility}
+          onSelect={handleSelect}
         />
       ))}
     </MapContainer>
   )
-}
+})
