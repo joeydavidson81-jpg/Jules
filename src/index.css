@@ -27,11 +27,12 @@ html, body, #root {
 }
 
 /* ── Smooth star hover ───────────────────────────────────────────────────── */
+/* transform: scale() removed — it shifts the visual position away from     */
+/* Leaflet's hit-box on touch devices, causing misfire on ~half the stars.  */
 .leaflet-marker-icon {
-  transition: transform 0.15s ease, filter 0.15s ease;
+  transition: filter 0.15s ease;
 }
 .leaflet-marker-icon:hover {
-  transform: scale(1.25) !important;
   filter: drop-shadow(0 4px 8px rgba(214, 158, 46, 0.7)) !important;
   cursor: pointer;
 }
