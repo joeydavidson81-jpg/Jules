@@ -26,19 +26,13 @@ html, body, #root {
   background: #1a1a2e;
 }
 
-/* ── Smooth star hover ───────────────────────────────────────────────────── */
-/* transform: scale() removed — it shifts the visual position away from     */
-/* Leaflet's hit-box on touch devices, causing misfire on ~half the stars.  */
-.leaflet-marker-icon {
-  transition: filter 0.15s ease;
-}
+/* ── Star marker hover ───────────────────────────────────────────────────── */
 .leaflet-marker-icon:hover {
-  filter: drop-shadow(0 4px 8px rgba(214, 158, 46, 0.7)) !important;
+  filter: drop-shadow(0 4px 8px rgba(214,158,46,0.7));
   cursor: pointer;
 }
 
-/* ── Star icon selection (CSS class toggle — no setIcon(), no DOM churn) ──── */
-/* Scale and colour change happen in-place on the existing element.          */
+/* ── Star icon layout ────────────────────────────────────────────────────── */
 .star-icon-wrapper {
   width: 36px;
   height: 36px;
@@ -46,23 +40,25 @@ html, body, #root {
   align-items: center;
   justify-content: center;
 }
+
 .star-icon-wrapper .star-svg {
   width: 22px;
   height: 22px;
-  transition: transform 0.15s ease;
-  transform-origin: center center;
 }
-.leaflet-marker-icon.star-selected .star-icon-wrapper .star-svg {
-  transform: scale(1.45); /* 22 × 1.45 ≈ 32px — matches the old ICON_SELECTED size */
-}
+
+/* ── Star selection state (color-only — no geometry/transform changes) ───── */
 .star-icon-wrapper .star-poly {
-  transition: fill 0.15s ease;
+  transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
 }
+
 .leaflet-marker-icon.star-selected .star-icon-wrapper .star-poly {
   fill: #f97316;
+  stroke: #7c2d12;
+  stroke-width: 1.5;
 }
 
 /* ── Custom Leaflet tooltip overrides ────────────────────────────────────── */
-.leaflet-tooltip {
-  pointer-events: none;
+.leaflet-tooltip,
+.leaflet-tooltip-pane {
+  pointer-events: none !important;
 }
