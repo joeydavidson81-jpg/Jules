@@ -1,6 +1,8 @@
 import { memo, useState, useCallback, useRef, useEffect } from 'react'
 import { MapContainer, TileLayer, Marker, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
+import { collectionGroup, onSnapshot } from 'firebase/firestore'
+import { db } from '../firebase'
 import { FACILITIES } from '../data/facilities'
 
 delete L.Icon.Default.prototype._getIconUrl
@@ -27,13 +29,14 @@ const STAR_ICON = L.divIcon({
 
 const TOOLTIP_OFFSET = [0, -8]
 
-const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSelect }) {
-  const markerRef = useRef(null)
-  const onSelectRef = useRef(onSelect)
+const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, hasEvents, onSelect }) {
+  const markerRef     = useRef(null)
+  const onSelectRef   = useRef(onSelect)
   const facilityIdRef = useRef(facility.id)
-  useEffect(() => { onSelectRef.current = onSelect }, [onSelect])
+  useEffect(() => { onSelectRef.current = onSelect },   [onSelect])
   useEffect(() => { facilityIdRef.current = facility.id }, [facility.id])
 
+  // Imperative click — bypasses react-leaflet prop diffing entirely
   useEffect(() => {
     const marker = markerRef.current
     if (!marker) return
@@ -46,19 +49,23 @@ const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSe
       onSelectRef.current(facilityIdRef.current)
     }
     marker.on('click', handler)
-    marker.on('tap', handler)
-    return () => {
-      marker.off('click', handler)
-      marker.off('tap', handler)
-    }
+    marker.on('tap',   handler)
+    return () => { marker.off('click', handler); marker.off('tap', handler) }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // CSS class toggles — no setIcon(), no DOM churn, no bounce
+  useEffect(() => {
+    const el = markerRef.current?.getElement()
+    if (!el) return
+    el.classList.toggle('star-selected',   isSelected)
+  }, [isSelected])
 
   useEffect(() => {
     const el = markerRef.current?.getElement()
     if (!el) return
-    el.classList.toggle('star-selected', isSelected)
-  }, [isSelected])
+    el.classList.toggle('star-has-events', hasEvents)
+  }, [hasEvents])
 
   return (
     <Marker ref={markerRef} position={[facility.lat, facility.lng]} icon={STAR_ICON}>
@@ -73,7 +80,17 @@ const FacilityMarker = memo(function FacilityMarker({ facility, isSelected, onSe
 })
 
 export default memo(function MapView({ onSelectFacility }) {
-  const [selectedId, setSelectedId] = useState(null)
+  const [selectedId, setSelectedId]             = useState(null)
+  const [facilitiesWithEvents, setFacilitiesWithEvents] = useState(new Set())
+
+  // Real-time set of facility IDs that have at least one event
+  useEffect(() => {
+    const unsub = onSnapshot(collectionGroup(db, 'events'), (snap) => {
+      const ids = new Set(snap.docs.map((d) => d.ref.parent.parent.id))
+      setFacilitiesWithEvents(ids)
+    })
+    return unsub
+  }, [])
 
   const handleSelect = useCallback((id) => {
     setSelectedId(id)
@@ -88,8 +105,13 @@ export default memo(function MapView({ onSelectFacility }) {
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
       />
       {FACILITIES.map((facility) => (
-        <FacilityMarker key={facility.id} facility={facility}
-          isSelected={facility.id === selectedId} onSelect={handleSelect}/>
+        <FacilityMarker
+          key={facility.id}
+          facility={facility}
+          isSelected={facility.id === selectedId}
+          hasEvents={facilitiesWithEvents.has(facility.id)}
+          onSelect={handleSelect}
+        />
       ))}
     </MapContainer>
   )

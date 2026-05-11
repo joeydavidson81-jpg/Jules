@@ -46,11 +46,18 @@ html, body, #root {
   height: 22px;
 }
 
-/* ── Star selection state (color-only — no geometry/transform changes) ───── */
+/* ── Star color states (order matters: selected must come last to win) ───── */
 .star-icon-wrapper .star-poly {
   transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
 }
 
+/* Has events → blue */
+.leaflet-marker-icon.star-has-events .star-icon-wrapper .star-poly {
+  fill: #3b82f6;
+  stroke: #1d4ed8;
+}
+
+/* Selected → orange (overrides blue when both classes present) */
 .leaflet-marker-icon.star-selected .star-icon-wrapper .star-poly {
   fill: #f97316;
   stroke: #7c2d12;
