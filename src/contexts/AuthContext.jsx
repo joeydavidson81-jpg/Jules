@@ -9,8 +9,7 @@ import {
 import { doc, getDoc } from 'firebase/firestore'
 import { auth, db } from '../firebase'
 
-// ─── Admin UID (hard-coded as specified) ─────────────────────────────────────
-const ADMIN_UID = 'Tq2O90cywWNJOFwxYRw7qV67Y2t2'
+const ADMIN_EMAIL = 'joeydavidson81@gmail.com'
 
 const AuthContext = createContext(null)
 
@@ -25,7 +24,7 @@ export function AuthProvider({ children }) {
       setRole('volunteer')
       return
     }
-    if (firebaseUser.uid === ADMIN_UID) {
+    if (firebaseUser.email === ADMIN_EMAIL) {
       setRole('admin')
       return
     }
