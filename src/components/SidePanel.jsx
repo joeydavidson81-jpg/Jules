@@ -18,12 +18,13 @@ import AddEventModal from './AddEventModal'
 function formatDate(ts) {
   if (!ts) return ''
   const d = ts.toDate ? ts.toDate() : new Date(ts)
-  return d.toLocaleDateString('en-US', {
-    weekday: 'short',
-    month:   'short',
-    day:     'numeric',
-    year:    'numeric',
+  const datePart = d.toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
   })
+  const h = d.getHours(), m = d.getMinutes()
+  if (h === 0 && m === 0) return datePart
+  const timePart = d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+  return `${datePart} · ${timePart}`
 }
 
 // ── Badge ────────────────────────────────────────────────────────────────────
@@ -50,8 +51,12 @@ function EventCard({ event, facilityId }) {
   const { user, canManage } = useAuth()
   const [busy, setBusy] = useState(false)
 
-  const signedUp   = user && Array.isArray(event.signups) && event.signups.includes(user.uid)
+  const signedUp    = user && Array.isArray(event.signups) && event.signups.includes(user.uid)
   const signupCount = Array.isArray(event.signups) ? event.signups.length : 0
+  const needed      = typeof event.volunteersNeeded === 'number' && event.volunteersNeeded > 0
+                        ? event.volunteersNeeded : null
+  const spotsLeft   = needed !== null ? Math.max(0, needed - signupCount) : null
+  const isFull      = needed !== null && signupCount >= needed
 
   const handleSignup = useCallback(async () => {
     if (!user) return
@@ -70,15 +75,15 @@ function EventCard({ event, facilityId }) {
 
   return (
     <div className="bg-white border border-gray-200 rounded-xl p-4 shadow-sm hover:shadow-md transition-shadow">
-      {/* Header row */}
-      <div className="flex items-start justify-between gap-2 mb-2">
+      {/* Title row */}
+      <div className="flex items-start justify-between gap-2 mb-1">
         <h4 className="text-sm font-semibold text-gray-900 leading-tight">
           {event.title}
         </h4>
-        <span className="text-xs text-gray-400 whitespace-nowrap shrink-0">
-          {formatDate(event.date)}
-        </span>
       </div>
+
+      {/* Date / time */}
+      <p className="text-xs text-gray-400 mb-2">{formatDate(event.date)}</p>
 
       {/* Description */}
       {event.description && (
@@ -87,24 +92,47 @@ function EventCard({ event, facilityId }) {
         </p>
       )}
 
+      {/* Volunteer count / spots bar */}
+      {needed !== null && (
+        <div className="mb-3">
+          <div className="flex justify-between text-xs mb-1">
+            <span className={isFull ? 'text-red-500 font-semibold' : 'text-gray-500'}>
+              {isFull ? 'Event full' : `${spotsLeft} spot${spotsLeft !== 1 ? 's' : ''} remaining`}
+            </span>
+            <span className="text-gray-400">{signupCount} / {needed} filled</span>
+          </div>
+          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all ${isFull ? 'bg-red-400' : 'bg-blue-500'}`}
+              style={{ width: `${Math.min(100, (signupCount / needed) * 100)}%` }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Footer row */}
       <div className="flex items-center justify-between">
-        <span className="text-xs text-gray-400">
-          {signupCount} volunteer{signupCount !== 1 ? 's' : ''} signed up
-        </span>
+        {needed === null && (
+          <span className="text-xs text-gray-400">
+            {signupCount} volunteer{signupCount !== 1 ? 's' : ''} signed up
+          </span>
+        )}
+        {needed !== null && <span />}
 
         {/* Volunteers see Sign Up / Withdraw */}
         {!canManage && user && (
           <button
             onClick={handleSignup}
-            disabled={busy}
+            disabled={busy || (isFull && !signedUp)}
             className={`text-xs font-medium px-3 py-1.5 rounded-lg transition-colors disabled:opacity-50 ${
               signedUp
                 ? 'bg-red-50 text-red-600 hover:bg-red-100'
-                : 'bg-blue-600 text-white hover:bg-blue-700'
+                : isFull
+                  ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  : 'bg-blue-600 text-white hover:bg-blue-700'
             }`}
           >
-            {busy ? '…' : signedUp ? 'Withdraw' : 'Sign Up'}
+            {busy ? '…' : signedUp ? 'Withdraw' : isFull ? 'Full' : 'Sign Up'}
           </button>
         )}
         {!canManage && !user && (
