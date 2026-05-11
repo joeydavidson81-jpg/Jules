@@ -1,83 +1,20 @@
-import { createContext, useContext, useEffect, useState } from 'react'
-import {
-  onAuthStateChanged,
-  signInWithEmailAndPassword,
-  signOut,
-  GoogleAuthProvider,
-  signInWithPopup,
-} from 'firebase/auth'
-import { doc, getDoc } from 'firebase/firestore'
-import { auth, db } from '../firebase'
+import { createContext, useContext, useState } from 'react'
 
-const ADMIN_EMAIL = 'joeydavidson81@gmail.com'
-
+const ADMIN_PASSWORD = 'Ministry2025'
 const AuthContext = createContext(null)
 
 export function AuthProvider({ children }) {
-  const [user, setUser]       = useState(null)   // Firebase user object
-  const [role, setRole]       = useState('volunteer') // 'admin' | 'leader' | 'volunteer'
-  const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
 
-  // ── Derive role from UID + Firestore ────────────────────────────────────────
-  async function resolveRole(firebaseUser) {
-    if (!firebaseUser) {
-      setRole('volunteer')
-      return
-    }
-    if (firebaseUser.email === ADMIN_EMAIL) {
-      setRole('admin')
-      return
-    }
-    try {
-      const snap = await getDoc(doc(db, 'users', firebaseUser.uid))
-      if (snap.exists() && snap.data().role === 'leader') {
-        setRole('leader')
-      } else {
-        setRole('volunteer')
-      }
-    } catch {
-      setRole('volunteer')
-    }
+  const login = (password) => {
+    if (password === ADMIN_PASSWORD) { setIsAdmin(true); return true }
+    return false
   }
-
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, async (firebaseUser) => {
-      setUser(firebaseUser)
-      await resolveRole(firebaseUser)
-      setLoading(false)
-    })
-    return unsub
-  }, [])
-
-  // ── Auth helpers ────────────────────────────────────────────────────────────
-  const loginWithEmail = (email, password) =>
-    signInWithEmailAndPassword(auth, email, password)
-
-  const loginWithGoogle = () =>
-    signInWithPopup(auth, new GoogleAuthProvider())
-
-  const logout = () => signOut(auth)
-
-  // ── Convenience booleans ────────────────────────────────────────────────────
-  const isAdmin    = role === 'admin'
-  const isLeader   = role === 'leader'
-  const canManage  = isAdmin || isLeader   // can add/edit events
-
-  const value = {
-    user,
-    role,
-    isAdmin,
-    isLeader,
-    canManage,
-    loading,
-    loginWithEmail,
-    loginWithGoogle,
-    logout,
-  }
+  const logout = () => setIsAdmin(false)
 
   return (
-    <AuthContext.Provider value={value}>
-      {!loading && children}
+    <AuthContext.Provider value={{ isAdmin, canManage: isAdmin, login, logout }}>
+      {children}
     </AuthContext.Provider>
   )
 }
