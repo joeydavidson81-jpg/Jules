@@ -1,0 +1,71 @@
+/* ── Leaflet base styles (must come before Tailwind to allow overrides) ───── */
+@import "leaflet/dist/leaflet.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Global resets ───────────────────────────────────────────────────────── */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+}
+
+/* ── Leaflet container fill ──────────────────────────────────────────────── */
+.leaflet-container {
+  width: 100%;
+  height: 100%;
+  background: #1a1a2e;
+}
+
+/* ── Star marker hover ───────────────────────────────────────────────────── */
+.leaflet-marker-icon:hover {
+  filter: drop-shadow(0 4px 8px rgba(214,158,46,0.7));
+  cursor: pointer;
+}
+
+/* ── Star icon layout ────────────────────────────────────────────────────── */
+.star-icon-wrapper {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.star-icon-wrapper .star-svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Star color states (order matters: selected must come last to win) ───── */
+.star-icon-wrapper .star-poly {
+  transition: fill 0.15s ease, stroke 0.15s ease, stroke-width 0.15s ease;
+}
+
+/* Has events → blue */
+.leaflet-marker-icon.star-has-events .star-icon-wrapper .star-poly {
+  fill: #3b82f6;
+  stroke: #1d4ed8;
+}
+
+/* Selected → orange (overrides blue when both classes present) */
+.leaflet-marker-icon.star-selected .star-icon-wrapper .star-poly {
+  fill: #f97316;
+  stroke: #7c2d12;
+  stroke-width: 1.5;
+}
+
+/* ── Custom Leaflet tooltip overrides ────────────────────────────────────── */
+.leaflet-tooltip,
+.leaflet-tooltip-pane {
+  pointer-events: none !important;
+}
